@@ -30,6 +30,7 @@ extern struct PROCESSPAGETABLE *ptbr;
 int getfreeframe();
 int searchvirtualframe();
 int getfifo();
+int OldestPage();
 
 int pagefault(char *vaddress)
 {
@@ -42,19 +43,16 @@ int pagefault(char *vaddress)
 
     // A partir de la dirección que provocó el fallo, calculamos la página
     pag_del_proceso=(long) vaddress>>12;
+    // Cuenta los marcos asignados al proceso
+    i=countframesassigned();
 
-
-    // Si la página del proceso está en un marco virtual del disco
+    if((ptbr + pag_del_proceso)->framenumber == NINGUNO)// Si la página del proceso está en un marco virtual del disco
     {
 
 		// Lee el marco virtual al buffer
 
         // Libera el frame virtual
     }
-
-
-    // Cuenta los marcos asignados al proceso
-    i=countframesassigned();
 
     // Si ya ocupó todos sus marcos, expulsa una página
     if(i>=RESIDENTSETSIZE)
@@ -91,4 +89,54 @@ int pagefault(char *vaddress)
 
 
     return(1); // Regresar todo bien
+}
+
+int getfreeframe()
+{
+  int counter, flag;
+  flag = 0;
+  //Searches for a free frame in physical memory
+  for(counter = framesbegin; counter < systemframetablesize + framesbegin ; counter++)
+  {
+    if(systemframetable[counter].assigned == 0)
+    {
+      systemframetable[counter] = 1;
+      flag = 1;
+    }
+      break;
+  }
+  if(flag == 0)
+    counter = NINGUNO;
+  else
+    return (counter);
+  }
+}
+
+int searchvirtualframe()
+{
+  int counter;
+  //searches for a free frame in virtual memory
+
+
+}
+
+int OldestPage()
+{
+  int counter;
+  int oldest_page = 0;
+  unsigned long smallest_time = 0, time_dif = 0;
+  //Searches for the oldest accessed page by selecting the one with the shortest time between it arrived and when it was last accessed
+  for(counter = 0; counter < PROCESS_PAGES; counter++)
+  {
+    if((ptbr + counter)->presente == 1)
+    {//time calculation of the amount of time
+      time_dif = (ptbr + counter)-> tlastaccess - (ptbr + counter)->tarrived;
+      if(smallest_time <= time_dif)
+      {
+        oldest_page = counter;
+        smallest_time = time_dif;
+      }
+    }
+  }
+  return oldest_page;
 }
