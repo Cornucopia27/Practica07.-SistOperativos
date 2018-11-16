@@ -145,15 +145,15 @@ int searchvirtualframe()
 {
   int counter;
   //searches for a free frame in virtual memory
-  for(counter = (systemframetablesize + framesbegin); counter < 2*(systemframetablesize + framesbegin); counter++)
+  for(counter = (systemframetablesize + framesbegin); counter < (2*systemframetablesize) + framesbegin; counter++)
   {
-    if(systemframetable[counter].assigned == 0)
+    if(!systemframetable[counter].assigned)
     {
       systemframetable[counter].assigned = 1;
       break;
     }
   }
-  if(counter<2*(systemframetablesize + framesbegin))
+  if(counter< (2*systemframetablesize) + framesbegin)
   {
     systemframetable[counter].assigned = 1;
   } else
