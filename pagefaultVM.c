@@ -57,44 +57,43 @@ int pagefault(char *vaddress)
       readblock(buffer, frame);
       // Libera el frame virtual
       systemframetable[frame].assigned = 0;
-
-      // Cuenta los marcos asignados al proceso
-      i=countframesassigned();
-      // Si ya ocupó todos sus marcos, expulsa una página
-      if(i >= RESIDENTSETSIZE)
+    }
+    // Cuenta los marcos asignados al proceso
+    i=countframesassigned();
+    // Si ya ocupó todos sus marcos, expulsa una página
+    if(i >= RESIDENTSETSIZE)
+    {
+      oldest_page = OldestPage(); //busca la página más vieja
+      if(oldest_page == NINGUNO)
       {
-        oldest_page = OldestPage(); //busca la página más vieja
-        if(oldest_page == NINGUNO)
-        {
-			       printf("Error encontrando página más vieja");// Escribe el frame de la página en el archivo de respaldo y pon en 0 el bit de modificado
-        }
-        if((ptbr + oldest_page)->modificado == 1)// Si la página ya fue modificada, grábala en disco
-        {
-          (ptbr + oldest_page)->presente = 0; //expulsar página más vieja
-          // Escribe el frame de la página en el archivo de respaldo y pon en 0 el bit de modificado
-          (ptbr + oldest_page)->modificado = 0;
-          frame = (ptbr + oldest_page)->framenumber;
-          saveframe(frame);
-        }
-        vframe = searchvirtualframe(); // Busca un frame virtual en memoria secundaria
-    	  if(vframe == NINGUNO)// Si no hay frames virtuales en memoria secundaria regresa error
-    		{
-          printf("Error No se encuentran MV libres");
-          return(-1);
-        }
-          // Copia el frame a memoria secundaria, actualiza la tabla de páginas y libera el marco de la memoria principal
-          copyframe(frame, vframe); //copio el MF (source) a un MV libre (destination)
-          (ptbr + oldest_page)->presente = 0; //expulsar página más vieja
-          (ptbr + oldest_page)->framenumber = vframe; //el numero de marco es ahora el virtual
-          systemframetable[frame].assigned = 0;//el marco en memoria principal ahora esta libres
-          systemframetable[vframe].assigned = 1;//el marco virtual esta ocupado ahora
+		       printf("Error encontrando página más vieja");// Escribe el frame de la página en el archivo de respaldo y pon en 0 el bit de modificado
       }
+      if((ptbr + oldest_page)->modificado == 1)// Si la página ya fue modificada, grábala en disco
+      {
+        (ptbr + oldest_page)->presente = 0; //expulsar página más vieja
+        // Escribe el frame de la página en el archivo de respaldo y pon en 0 el bit de modificado
+        (ptbr + oldest_page)->modificado = 0;
+        frame = (ptbr + oldest_page)->framenumber;
+        saveframe(frame);
+      }
+      vframe = searchvirtualframe(); // Busca un frame virtual en memoria secundaria
+  	  if(vframe == NINGUNO)// Si no hay frames virtuales en memoria secundaria regresa error
+  		{
+        printf("Error No se encuentran MV libres");
+        return(-1);
+      }
+        // Copia el frame a memoria secundaria, actualiza la tabla de páginas y libera el marco de la memoria principal
+        copyframe(frame, vframe); //copio el MF (source) a un MV libre (destination)
+        (ptbr + oldest_page)->presente = 0; //expulsar página más vieja
+        (ptbr + oldest_page)->framenumber = vframe; //el numero de marco es ahora el virtual
+        systemframetable[frame].assigned = 0;//el marco en memoria principal ahora esta libres
+        systemframetable[vframe].assigned = 1;//el marco virtual esta ocupado ahora
     }
 
     // Busca un marco físico libre en el sistema
     frame = getfreeframe();
 	   // Si no hay marcos físicos libres en el sistema regresa error
-     if(frame == NINGUNO)
+     if(frame == NINGUNO && ptbr[pag_del_proceso].framenumber== NINGUNO)
     {
       printf("Error no hay marco físico libre");
         return(-1); // Regresar indicando error de memoria insuficiente
@@ -104,9 +103,9 @@ int pagefault(char *vaddress)
         // Cópialo al frame libre encontrado en memoria principal y transfiérelo a la memoria física
         writeblock(buffer, frame);//copia a un buffer lo que hay en ese frame source
     }
-	// Poner el bit de presente en 1 en la tabla de páginas y el frame
+	   // Poner el bit de presente en 1 en la tabla de páginas y el frame
     (ptbr + pag_del_proceso)->presente = 1;
-    (ptbr + pag_del_proceso)->framenumber = 1;
+    (ptbr + pag_del_proceso)->framenumber = frame;
     return(1); // Regresar todo bien
 }
 
@@ -167,6 +166,7 @@ int OldestPage()
   int counter;
   int oldest_page = 0;
   unsigned long smallest_time = 0, time_dif = 0;
+  //printf("En Oldest page esta el error);
   //Searches for the oldest accessed page by selecting the one with the shortest time between it arrived and when it was last accessed
   for(counter = 0; counter < PROCESS_PAGES; counter++)
   {
